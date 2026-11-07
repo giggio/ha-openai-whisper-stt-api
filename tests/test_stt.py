@@ -307,13 +307,32 @@ async def test_entity_skips_audio_without_speech(
 
     server = await transcription_server_factory([(200, None)])
     test_entity = entity(hass, url=server.url, skip_silence=True)
+    # PCM_CHUNK is a second: the pipeline timed out after 15 without a
+    # command, and kept back the chunk it timed out on
     result = await test_entity.async_process_audio_stream(
-        make_metadata(), fast_stream()
+        make_metadata(), fast_stream(14)
     )
     assert result.result is SpeechResultState.SUCCESS
     assert result.text == ""
     assert server.requests == []
     assert test_entity.extra_state_attributes["processing"] is False
+
+
+async def test_entity_transcribes_audio_the_pipeline_ended_early(
+    hass: Any,
+    transcription_server_factory: Any,
+) -> None:
+    """Audio that ended before the pipeline's timeout is transcribed, a command or not."""
+    from homeassistant.components.stt import SpeechResultState
+
+    server = await transcription_server_factory([(200, None)])
+    test_entity = entity(hass, url=server.url, skip_silence=True)
+    result = await test_entity.async_process_audio_stream(
+        make_metadata(), fast_stream()
+    )
+    assert result.result is SpeechResultState.SUCCESS
+    assert result.text == TEST_TRANSCRIPTION
+    assert server.requests[0]["audio"][44:] == PCM_CHUNK * 3
 
 
 async def test_entity_uploads_all_audio_once_speech_is_heard(
@@ -324,8 +343,8 @@ async def test_entity_uploads_all_audio_once_speech_is_heard(
     """The audio held back while listening for speech is uploaded too."""
     from homeassistant.components.stt import SpeechResultState
 
-    # PCM_CHUNK is 100 frames: speech starts in the second chunk
-    scripted_vad([0.0] * 100 + [0.9] * 10)
+    # PCM_CHUNK is 100 frames: the command starts in the second chunk
+    scripted_vad([0.0] * 100 + [0.9] * 40)
     server = await transcription_server_factory([(200, None)])
     test_entity = entity(hass, url=server.url, skip_silence=True)
     result = await test_entity.async_process_audio_stream(

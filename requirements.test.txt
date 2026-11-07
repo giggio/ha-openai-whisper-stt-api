@@ -2,3 +2,13 @@
 # pytest-homeassistant-custom-component pins the matching Home Assistant version.
 pytest-homeassistant-custom-component==0.13.372
 pytest-cov>=7.0
+
+# The speech check uses assist_pipeline's segmenter: its requirements and those of
+# the integrations it depends on (conversation, tts, ffmpeg), as Home Assistant pins them.
+gazetteer-matcher==1.1.0
+ha-ffmpeg==3.2.2
+hassil==3.12.1
+home-assistant-intents==2026.10.6
+mutagen==1.48.1
+pymicro-vad==1.0.1
+pyspeex-noise==1.0.2

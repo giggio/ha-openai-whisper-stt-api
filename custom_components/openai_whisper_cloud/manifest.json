@@ -1,6 +1,7 @@
 {
   "domain": "openai_whisper_cloud",
   "name": "Whisper Cloud",
+  "after_dependencies": ["assist_pipeline"],
   "codeowners": [
     "@fabio-garavini"
   ],
