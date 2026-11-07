@@ -38,6 +38,7 @@ from .const import (
     CONF_FILE_FIELD,
     CONF_PROMPT,
     CONF_PROVIDER_TYPE,
+    CONF_SKIP_SILENCE,
     CONF_STREAMING,
     CONF_TEMPERATURE,
     CONFIG_MINOR_VERSION,
@@ -45,6 +46,7 @@ from .const import (
     DEFAULT_CUSTOM_MODEL,
     DEFAULT_CUSTOM_NAME,
     DEFAULT_PROMPT,
+    DEFAULT_SKIP_SILENCE,
     DEFAULT_STREAMING,
     DEFAULT_TEMPERATURE,
     DOMAIN,
@@ -230,6 +232,9 @@ def _builtin_schema(provider: WhisperProvider, api_key_optional: bool) -> vol.Sc
         schema[vol.Optional(CONF_STREAMING, default=DEFAULT_STREAMING)] = (
             BooleanSelector()
         )
+    schema[vol.Optional(CONF_SKIP_SILENCE, default=DEFAULT_SKIP_SILENCE)] = (
+        BooleanSelector()
+    )
     return vol.Schema(schema)
 
 
@@ -242,6 +247,9 @@ CUSTOM_SCHEMA = vol.Schema(
         vol.Optional(CONF_TEMPERATURE, default=DEFAULT_TEMPERATURE): TEMPERATURE_SCHEMA,
         vol.Optional(CONF_PROMPT, default=DEFAULT_PROMPT): PROMPT_SELECTOR,
         vol.Optional(CONF_STREAMING, default=DEFAULT_STREAMING): BooleanSelector(),
+        vol.Optional(
+            CONF_SKIP_SILENCE, default=DEFAULT_SKIP_SILENCE
+        ): BooleanSelector(),
         vol.Optional(CONF_FILE_FIELD, default="file"): cv.string,
     }
 )
@@ -305,6 +313,14 @@ class OptionsFlowHandler(OptionsFlowWithConfigEntry):
                     ),
                 )
             ] = BooleanSelector()
+        schema[
+            vol.Optional(
+                CONF_SKIP_SILENCE,
+                default=self.config_entry.options.get(
+                    CONF_SKIP_SILENCE, DEFAULT_SKIP_SILENCE
+                ),
+            )
+        ] = BooleanSelector()
 
         return self.async_show_form(
             step_id="init",
@@ -395,6 +411,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                             CONF_STREAMING: user_input.get(
                                 CONF_STREAMING, DEFAULT_STREAMING
                             ),
+                            CONF_SKIP_SILENCE: user_input.get(
+                                CONF_SKIP_SILENCE, DEFAULT_SKIP_SILENCE
+                            ),
                         },
                     )
             else:
@@ -453,6 +472,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                             CONF_PROMPT: user_input.get(CONF_PROMPT, DEFAULT_PROMPT),
                             CONF_STREAMING: user_input.get(
                                 CONF_STREAMING, DEFAULT_STREAMING
+                            ),
+                            CONF_SKIP_SILENCE: user_input.get(
+                                CONF_SKIP_SILENCE, DEFAULT_SKIP_SILENCE
                             ),
                         },
                     )
@@ -538,6 +560,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                             CONF_STREAMING: user_input.get(
                                 CONF_STREAMING, DEFAULT_STREAMING
                             ),
+                            CONF_SKIP_SILENCE: user_input.get(
+                                CONF_SKIP_SILENCE, DEFAULT_SKIP_SILENCE
+                            ),
                         },
                     )
                     return self.async_abort(reason="reconfigure_successful")
@@ -563,6 +588,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_STREAMING, default=DEFAULT_STREAMING
                     ): BooleanSelector(),
+                    vol.Optional(
+                        CONF_SKIP_SILENCE, default=DEFAULT_SKIP_SILENCE
+                    ): BooleanSelector(),
                     vol.Optional(CONF_FILE_FIELD): cv.string,
                 }
             )
@@ -573,6 +601,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_TEMPERATURE: entry.options.get(CONF_TEMPERATURE),
                 CONF_PROMPT: entry.options.get(CONF_PROMPT, DEFAULT_PROMPT),
                 CONF_STREAMING: entry.options.get(CONF_STREAMING, DEFAULT_STREAMING),
+                CONF_SKIP_SILENCE: entry.options.get(
+                    CONF_SKIP_SILENCE, DEFAULT_SKIP_SILENCE
+                ),
                 CONF_FILE_FIELD: entry.data.get(CONF_FILE_FIELD, "file"),
             }
         else:
@@ -583,6 +614,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_TEMPERATURE: entry.options.get(CONF_TEMPERATURE),
                 CONF_PROMPT: entry.options.get(CONF_PROMPT, DEFAULT_PROMPT),
                 CONF_STREAMING: entry.options.get(CONF_STREAMING, DEFAULT_STREAMING),
+                CONF_SKIP_SILENCE: entry.options.get(
+                    CONF_SKIP_SILENCE, DEFAULT_SKIP_SILENCE
+                ),
             }
 
         return self.async_show_form(

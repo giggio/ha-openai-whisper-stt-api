@@ -35,13 +35,16 @@ from .const import (
     CONF_FILE_FIELD,
     CONF_PROMPT,
     CONF_PROVIDER_TYPE,
+    CONF_SKIP_SILENCE,
     CONF_STREAMING,
     CONF_TEMPERATURE,
     DEFAULT_PROMPT,
+    DEFAULT_SKIP_SILENCE,
     DEFAULT_STREAMING,
     DEFAULT_TEMPERATURE,
     DOMAIN,
 )
+from .speech import VAD_SAMPLE_RATE, wait_for_speech
 from .whisper_provider import (
     WhisperModel,
     WhisperProvider,
@@ -234,6 +237,9 @@ async def async_setup_entry(
                 streaming=bool(
                     config_entry.options.get(CONF_STREAMING, DEFAULT_STREAMING)
                 ),
+                skip_silence=bool(
+                    config_entry.options.get(CONF_SKIP_SILENCE, DEFAULT_SKIP_SILENCE)
+                ),
                 name=config_entry.data[CONF_NAME],
                 unique_id=config_entry.entry_id,
             )
@@ -253,6 +259,7 @@ class OpenAIWhisperEntity(SpeechToTextEntity):
         prompt: str,
         model_name: str | None,
         streaming: bool,
+        skip_silence: bool,
         name: str,
         unique_id: str,
     ) -> None:
@@ -262,6 +269,7 @@ class OpenAIWhisperEntity(SpeechToTextEntity):
         self.temperature = temperature
         self.prompt = prompt
         self.streaming = streaming
+        self.skip_silence = skip_silence
         self.model: WhisperModel = provider.get_model(model_name)
         self._attr_name = name
         self._attr_unique_id = unique_id
@@ -322,6 +330,7 @@ class OpenAIWhisperEntity(SpeechToTextEntity):
             "provider": self.provider.name,
             "model": self.model.name,
             "streaming_upload": self.streaming,
+            "skip_silence": self.skip_silence,
         }
 
     def _get_client(self) -> WhisperTranscriptionClient:
@@ -360,6 +369,21 @@ class OpenAIWhisperEntity(SpeechToTextEntity):
         self._async_write_activity_state()
         _LOGGER.debug("Processing audio stream: %s", metadata)
         try:
+            # microVAD only scores 16 kHz, 16 bit mono audio, which is what the
+            # assist pipeline sends; other formats are transcribed unchecked.
+            if (
+                self.skip_silence
+                and metadata.sample_rate == VAD_SAMPLE_RATE
+                and metadata.bit_rate == AudioBitRates.BITRATE_16
+                and metadata.channel == AudioChannels.CHANNEL_MONO
+            ):
+                speech = await wait_for_speech(stream)
+                if speech is None:
+                    _LOGGER.debug("No speech in the audio, skipping transcription")
+                    # An empty text ends the pipeline run with "no text
+                    # recognized" instead of passing a made up command on.
+                    return SpeechResult("", SpeechResultState.SUCCESS)
+                stream = speech
             language = resolve_language(metadata.language, self.model.languages)
             prompt = resolve_prompt(self.hass, self.prompt)
             text = await self._get_client().transcribe(

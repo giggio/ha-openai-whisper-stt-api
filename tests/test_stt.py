@@ -20,6 +20,7 @@ from custom_components.openai_whisper_cloud.const import (
     CONF_BASE_URL,
     CONF_FILE_FIELD,
     CONF_PROVIDER_TYPE,
+    CONF_SKIP_SILENCE,
     CONF_STREAMING,
     CONF_TEMPERATURE,
     DOMAIN,
@@ -204,6 +205,7 @@ def entity(hass: Any, url: str | None = None, **kwargs: Any) -> OpenAIWhisperEnt
         "prompt": "",
         "model_name": None,
         "streaming": True,
+        "skip_silence": False,
         "name": "Whisper",
         "unique_id": "test-uid",
     }
@@ -262,6 +264,7 @@ async def test_entity_attributes(hass: Any) -> None:
         "provider": "OpenAI",
         "model": "whisper-1",
         "streaming_upload": False,
+        "skip_silence": False,
     }
 
 
@@ -293,6 +296,64 @@ async def test_entity_transcribes(
     assert result.text == TEST_TRANSCRIPTION
     # the prompt template was rendered and sent with the request
     assert server.requests[0]["fields"]["prompt"] == "kitchen, garage"
+
+
+async def test_entity_skips_audio_without_speech(
+    hass: Any,
+    transcription_server_factory: Any,
+) -> None:
+    """Audio without speech gives an empty text and never reaches the provider."""
+    from homeassistant.components.stt import SpeechResultState
+
+    server = await transcription_server_factory([(200, None)])
+    test_entity = entity(hass, url=server.url, skip_silence=True)
+    result = await test_entity.async_process_audio_stream(
+        make_metadata(), fast_stream()
+    )
+    assert result.result is SpeechResultState.SUCCESS
+    assert result.text == ""
+    assert server.requests == []
+    assert test_entity.extra_state_attributes["processing"] is False
+
+
+async def test_entity_uploads_all_audio_once_speech_is_heard(
+    hass: Any,
+    transcription_server_factory: Any,
+    scripted_vad: Any,
+) -> None:
+    """The audio held back while listening for speech is uploaded too."""
+    from homeassistant.components.stt import SpeechResultState
+
+    # PCM_CHUNK is 100 frames: speech starts in the second chunk
+    scripted_vad([0.0] * 100 + [0.9] * 10)
+    server = await transcription_server_factory([(200, None)])
+    test_entity = entity(hass, url=server.url, skip_silence=True)
+    result = await test_entity.async_process_audio_stream(
+        make_metadata(), fast_stream()
+    )
+    assert result.result is SpeechResultState.SUCCESS
+    assert result.text == TEST_TRANSCRIPTION
+    assert server.requests[0]["audio"][44:] == PCM_CHUNK * 3
+
+
+async def test_entity_transcribes_unscored_formats(
+    hass: Any,
+    transcription_server_factory: Any,
+) -> None:
+    """Audio microVAD cannot score is transcribed without the speech check."""
+    import dataclasses
+
+    from homeassistant.components.stt import AudioSampleRates, SpeechResultState
+
+    server = await transcription_server_factory([(200, None)])
+    test_entity = entity(hass, url=server.url, skip_silence=True)
+    metadata = dataclasses.replace(
+        make_metadata(), sample_rate=AudioSampleRates.SAMPLERATE_44100
+    )
+    result = await test_entity.async_process_audio_stream(metadata, fast_stream())
+    assert result.result is SpeechResultState.SUCCESS
+    assert result.text == TEST_TRANSCRIPTION
+    assert len(server.requests) == 1
 
 
 async def test_entity_sends_assist_prompt(
@@ -387,6 +448,7 @@ async def test_setup_entry_creates_entity(hass: Any) -> None:
     assert state.attributes["processing"] is False
     assert state.attributes["model"] == "whisper-1"
     assert state.attributes["streaming_upload"] is False
+    assert state.attributes["skip_silence"] is True
     assert state.state == "unknown"
 
 
@@ -443,7 +505,7 @@ async def test_registered_entity_writes_state(
             CONF_BASE_URL: server.url,
             CONF_API_KEY: "",
         },
-        options={CONF_MODEL: "whisper-1"},
+        options={CONF_MODEL: "whisper-1", CONF_SKIP_SILENCE: False},
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)

@@ -175,6 +175,16 @@ These are the parameters that you can configure:
 
 - `streaming_upload`: (Optional) **Stream the audio to the provider while it is still being recorded** instead of uploading it after the recording completes. Default: on. See [Streaming uploads](#streaming-uploads-).
 
+- `skip_silence`: (Optional) **Skip audio without speech**: check the audio for speech locally before uploading it. Default: on. See [Audio without speech](#audio-without-speech-).
+
+## Audio without speech 🤫
+
+Whisper models do not return an empty text for silence, they make one up: a subtitle credit like "Thanks for watching", or a sentence of your prompt, which the prompt conditions them to repeat. Home Assistant sends the STT provider everything it captured after the wake word until its own voice detection times out, so saying the wake word and nothing else sends seconds of silence. The made up text then runs as a command, and if the assistant answers with a question, the next silent follow-up does it again.
+
+With `skip_silence` on, the integration scores the audio with microVAD, the same voice activity detector Home Assistant's assist pipeline uses, and holds it back until it hears about 100 ms of speech. Then it uploads everything from the start, so nothing you said is cut, and streaming carries on as usual. When the audio ends without speech nothing is uploaded, and the pipeline ends with *no text recognized*. The provider's own `no_speech_prob` does not help here: GroqCloud returns `0` even for digital silence.
+
+The check only applies to 16 kHz, 16 bit mono audio, which is what the assist pipeline sends. Other audio is transcribed without it.
+
 ## Streaming uploads ⚡
 
 By default the integration does not wait for the end of your voice command to start talking to the provider: audio is uploaded **while it is captured**, so by the time you stop speaking the upload is (almost) already done. This cuts the whole upload time out of the end-to-end latency, which is most noticeable on slow uplinks and with longer commands.
@@ -228,6 +238,7 @@ Because that state format is fixed by Home Assistant (`@final` in the base class
 | `provider` | Provider name (e.g. `OpenAI`, `Custom`) |
 | `model` | Model name (e.g. `gpt-4o-mini-transcribe`) |
 | `streaming_upload` | Whether uploads are streamed while recording |
+| `skip_silence` | Whether audio without speech is skipped |
 
 This makes it easy to build automations, e.g. trigger on `state` changes (each transcription updates it) or on `processing` turning `true`/`false`.
 

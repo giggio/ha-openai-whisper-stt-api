@@ -26,9 +26,11 @@ from custom_components.openai_whisper_cloud.const import (
     CONF_FILE_FIELD,
     CONF_PROMPT,
     CONF_PROVIDER_TYPE,
+    CONF_SKIP_SILENCE,
     CONF_STREAMING,
     CONF_TEMPERATURE,
     DEFAULT_PROMPT,
+    DEFAULT_SKIP_SILENCE,
     DEFAULT_STREAMING,
     DEFAULT_TEMPERATURE,
     DOMAIN,
@@ -298,6 +300,7 @@ async def test_user_step_selects_builtin(hass: Any) -> None:
         "temperature",
         "prompt",
         "streaming_upload",
+        "skip_silence",
     }
 
 
@@ -324,10 +327,11 @@ async def test_builtin_schema_hides_unsupported_options(hass: Any) -> None:
         "name",
         "api_key",
         "model",
+        "skip_silence",
     }
     assert schema_fields(
         {"data_schema": _builtin_schema(get_provider("xiaomimimo"), True)}
-    ) == {"name", "api_key", "model"}
+    ) == {"name", "api_key", "model", "skip_silence"}
 
 
 async def test_whisper_step_success(hass: Any) -> None:
@@ -351,6 +355,7 @@ async def test_whisper_step_success(hass: Any) -> None:
                 "temperature": 0.4,
                 "prompt": VALID_TEMPLATE,
                 "streaming_upload": False,
+                "skip_silence": False,
             },
         )
     assert result["type"] == FlowResultType.CREATE_ENTRY
@@ -365,6 +370,7 @@ async def test_whisper_step_success(hass: Any) -> None:
         CONF_TEMPERATURE: 0.4,
         CONF_PROMPT: VALID_TEMPLATE,
         CONF_STREAMING: False,
+        CONF_SKIP_SILENCE: False,
     }
     mock_validate.assert_awaited_once()
 
@@ -389,6 +395,7 @@ async def test_whisper_step_defaults_applied(hass: Any) -> None:
     assert result["options"][CONF_TEMPERATURE] == DEFAULT_TEMPERATURE
     assert result["options"][CONF_PROMPT] == DEFAULT_PROMPT
     assert result["options"][CONF_STREAMING] == DEFAULT_STREAMING
+    assert result["options"][CONF_SKIP_SILENCE] == DEFAULT_SKIP_SILENCE
 
 
 @pytest.mark.parametrize(
@@ -482,6 +489,7 @@ async def test_custom_step_success(hass: Any) -> None:
         CONF_TEMPERATURE: DEFAULT_TEMPERATURE,
         CONF_PROMPT: "hello",
         CONF_STREAMING: DEFAULT_STREAMING,
+        CONF_SKIP_SILENCE: DEFAULT_SKIP_SILENCE,
     }
 
 
@@ -618,6 +626,7 @@ async def test_reconfigure_builtin_success(hass: Any) -> None:
                 "temperature": 0.5,
                 "prompt": "new prompt",
                 "streaming_upload": False,
+                "skip_silence": False,
             },
         )
     assert result["type"] == FlowResultType.ABORT
@@ -628,6 +637,7 @@ async def test_reconfigure_builtin_success(hass: Any) -> None:
         CONF_TEMPERATURE: 0.5,
         CONF_PROMPT: "new prompt",
         CONF_STREAMING: False,
+        CONF_SKIP_SILENCE: False,
     }
 
 
@@ -688,6 +698,8 @@ async def test_reconfigure_suggested_values(hass: Any) -> None:
     assert marker.description["suggested_value"] == "old"
     marker, _ = get_field(result, CONF_STREAMING)
     assert marker.description["suggested_value"] is True
+    marker, _ = get_field(result, CONF_SKIP_SILENCE)
+    assert marker.description["suggested_value"] is DEFAULT_SKIP_SILENCE
 
 
 # ---------------------------------------------------------------------------
@@ -696,7 +708,7 @@ async def test_reconfigure_suggested_values(hass: Any) -> None:
 
 
 async def test_options_flow_updates_options(hass: Any) -> None:
-    """The options flow persists model, temperature, prompt, streaming."""
+    """The options flow persists model, temperature, prompt, streaming, speech check."""
     entry = builtin_entry()
     entry.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
@@ -706,6 +718,7 @@ async def test_options_flow_updates_options(hass: Any) -> None:
         "temperature",
         "prompt",
         "streaming_upload",
+        "skip_silence",
     }
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -714,6 +727,7 @@ async def test_options_flow_updates_options(hass: Any) -> None:
             "temperature": 0.3,
             "prompt": VALID_TEMPLATE,
             "streaming_upload": False,
+            "skip_silence": False,
         },
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
@@ -722,6 +736,7 @@ async def test_options_flow_updates_options(hass: Any) -> None:
         CONF_TEMPERATURE: 0.3,
         CONF_PROMPT: VALID_TEMPLATE,
         CONF_STREAMING: False,
+        CONF_SKIP_SILENCE: False,
     }
 
 
@@ -762,6 +777,7 @@ async def test_options_flow_custom_provider(hass: Any) -> None:
         "temperature",
         "prompt",
         "streaming_upload",
+        "skip_silence",
     }
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -777,7 +793,7 @@ async def test_options_flow_custom_provider(hass: Any) -> None:
 
 
 async def test_options_flow_restricted_provider(hass: Any) -> None:
-    """MiMo entries only offer the model."""
+    """MiMo entries only offer the model and the speech check."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         version=2,
@@ -787,16 +803,19 @@ async def test_options_flow_restricted_provider(hass: Any) -> None:
     )
     entry.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    assert schema_fields(result) == {"model"}
+    assert schema_fields(result) == {"model", "skip_silence"}
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"model": "mimo-v2.5-asr"}
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert entry.options == {CONF_MODEL: "mimo-v2.5-asr"}
+    assert entry.options == {
+        CONF_MODEL: "mimo-v2.5-asr",
+        CONF_SKIP_SILENCE: DEFAULT_SKIP_SILENCE,
+    }
 
 
 async def test_options_flow_cohere_provider(hass: Any) -> None:
-    """Cohere entries only offer the model."""
+    """Cohere entries only offer the model and the speech check."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         version=2,
@@ -806,7 +825,7 @@ async def test_options_flow_cohere_provider(hass: Any) -> None:
     )
     entry.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    assert schema_fields(result) == {"model"}
+    assert schema_fields(result) == {"model", "skip_silence"}
 
 
 async def test_reconfigure_custom_invalid_url(hass: Any) -> None:

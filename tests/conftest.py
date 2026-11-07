@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from typing import Any
 
 import pytest
 from aiohttp import web
+
+from custom_components.openai_whisper_cloud.speech import VAD_FRAME_BYTES
 
 TEST_TRANSCRIPTION = "turn on the living room light"
 
@@ -221,3 +223,29 @@ def fast_retries(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "custom_components.openai_whisper_cloud.client.RETRY_DELAY", 0.01
     )
+
+
+class ScriptedVad:
+    """Stand in for microVAD, scoring frames from a script."""
+
+    def __init__(self, probabilities: Iterable[float]) -> None:
+        """Initialize with the probability of each frame, then silence."""
+        self._probabilities = iter(probabilities)
+
+    def Process10ms(self, frame: bytes) -> float:
+        """Score one 10 ms frame."""
+        assert len(frame) == VAD_FRAME_BYTES
+        return next(self._probabilities, 0.0)
+
+
+@pytest.fixture
+def scripted_vad(monkeypatch: pytest.MonkeyPatch) -> Callable[[Iterable[float]], None]:
+    """Replace microVAD with one that scores frames from a script."""
+
+    def install(probabilities: Iterable[float]) -> None:
+        monkeypatch.setattr(
+            "custom_components.openai_whisper_cloud.speech.MicroVad",
+            lambda: ScriptedVad(probabilities),
+        )
+
+    return install

@@ -16,12 +16,14 @@
                     "model": "Modello",
                     "temperature": "Temperatura",
                     "prompt": "Prompt (Opzionale)",
-                    "streaming_upload": "Trasmetti l'audio durante la registrazione (minore latenza)"
+                    "streaming_upload": "Trasmetti l'audio durante la registrazione (minore latenza)",
+                    "skip_silence": "Salta l'audio senza parlato"
                 },
                 "data_description": {
                     "api_key": "Chiave API per il provider selezionato.",
                     "prompt": "Prompt puo' essere utilizzato per migliorare il riconoscimento di alcune parole o di nomi.\nFornisci una lista di parole o nomi separate da una virgola \", \".\nEsempio: `accendi, spegni, Chat GPT-3, DALL·E`.\nIl prompt puo' anche contenere template di Home Assistant che vengono valutati prima di ogni trascrizione, cosi' l'elenco resta automaticamente aggiornato, es. `'{{ states(''sensor.room_names'') }}, {{ states(''sensor.entity_names'') }}'`.\nUsa `'{{ assist_entity_names }}'` per elencare i nomi e gli alias di tutte le entita esposte ad Assist.",
-                    "streaming_upload": "Carica l'audio sul provider mentre viene ancora registrato, invece che al termine della registrazione. Se il provider non accetta upload in streaming, l'integrazione torna automaticamente a un upload bufferizzato e ricorda di non riprovare."
+                    "streaming_upload": "Carica l'audio sul provider mentre viene ancora registrato, invece che al termine della registrazione. Se il provider non accetta upload in streaming, l'integrazione torna automaticamente a un upload bufferizzato e ricorda di non riprovare.",
+                    "skip_silence": "Controlla su questo Home Assistant se l'audio contiene parlato prima di caricarlo. Quando nessuno parla, per esempio dopo una parola di attivazione senza nient'altro, non viene caricato nulla e la pipeline termina senza testo riconosciuto. I modelli Whisper non restituiscono un testo vuoto per il silenzio: ne inventano uno, spesso una frase del prompt, che verrebbe poi eseguita come comando."
                 }
             },
             "custom": {
@@ -34,7 +36,8 @@
                     "temperature": "Temperatura",
                     "prompt": "Prompt (Opzionale)",
                     "file_field": "Nome del campo file audio",
-                    "streaming_upload": "Trasmetti l'audio durante la registrazione (minore latenza)"
+                    "streaming_upload": "Trasmetti l'audio durante la registrazione (minore latenza)",
+                    "skip_silence": "Salta l'audio senza parlato"
                 },
                 "data_description": {
                     "url": "URL del tuo server. Un URL senza percorso riceve automaticamente l'endpoint standard (`https://host` e `https://host/v1` diventano `https://host/v1/audio/transcriptions`); qualsiasi URL che include gia' un percorso viene usato cosi' com'e', es. `http://host:8000/asr` (whisper-asr-webservice).",
@@ -42,7 +45,8 @@
                     "model": "Nome del modello accettato dal tuo server (es. `whisper-1`, `Systran/faster-whisper-large-v3`).",
                     "prompt": "Prompt puo' essere utilizzato per migliorare il riconoscimento di alcune parole o di nomi.\nFornisci una lista di parole o nomi separate da una virgola \", \".\nEsempio: `accendi, spegni, Chat GPT-3, DALL·E`.\nIl prompt puo' anche contenere template di Home Assistant che vengono valutati prima di ogni trascrizione, cosi' l'elenco resta automaticamente aggiornato, es. `'{{ states(''sensor.room_names'') }}, {{ states(''sensor.entity_names'') }}'`.\nUsa `'{{ assist_entity_names }}'` per elencare i nomi e gli alias di tutte le entita esposte ad Assist.",
                     "file_field": "Campo multipart usato per caricare l'audio. La maggior parte dei server compatibili OpenAI usa `file`; whisper-asr-webservice richiede `audio_file`. Se non sei sicuro, lascia `file`: l'integrazione rileva e riprova automaticamente in caso di risposta 422.",
-                    "streaming_upload": "Carica l'audio sul provider mentre viene ancora registrato, invece che al termine della registrazione. Se il provider non accetta upload in streaming, l'integrazione torna automaticamente a un upload bufferizzato e ricorda di non riprovare."
+                    "streaming_upload": "Carica l'audio sul provider mentre viene ancora registrato, invece che al termine della registrazione. Se il provider non accetta upload in streaming, l'integrazione torna automaticamente a un upload bufferizzato e ricorda di non riprovare.",
+                    "skip_silence": "Controlla su questo Home Assistant se l'audio contiene parlato prima di caricarlo. Quando nessuno parla, per esempio dopo una parola di attivazione senza nient'altro, non viene caricato nulla e la pipeline termina senza testo riconosciuto. I modelli Whisper non restituiscono un testo vuoto per il silenzio: ne inventano uno, spesso una frase del prompt, che verrebbe poi eseguita come comando."
                 }
             },
             "reconfigure": {
@@ -55,14 +59,16 @@
                     "temperature": "Temperatura",
                     "prompt": "Prompt (Opzionale)",
                     "file_field": "Nome del campo file audio",
-                    "streaming_upload": "Trasmetti l'audio durante la registrazione (minore latenza)"
+                    "streaming_upload": "Trasmetti l'audio durante la registrazione (minore latenza)",
+                    "skip_silence": "Salta l'audio senza parlato"
                 },
                 "data_description": {
                     "url": "URL del tuo server. Un URL senza percorso riceve automaticamente l'endpoint standard (`https://host` e `https://host/v1` diventano `https://host/v1/audio/transcriptions`); qualsiasi URL che include gia' un percorso viene usato cosi' com'e', es. `http://host:8000/asr` (whisper-asr-webservice).",
                     "api_key": "Lascia vuoto per mantenere la chiave API attuale.",
                     "prompt": "Prompt puo' essere utilizzato per migliorare il riconoscimento di alcune parole o di nomi.\nFornisci una lista di parole o nomi separate da una virgola \", \".\nEsempio: `accendi, spegni, Chat GPT-3, DALL·E`.\nIl prompt puo' anche contenere template di Home Assistant che vengono valutati prima di ogni trascrizione, cosi' l'elenco resta automaticamente aggiornato, es. `'{{ states(''sensor.room_names'') }}, {{ states(''sensor.entity_names'') }}'`.\nUsa `'{{ assist_entity_names }}'` per elencare i nomi e gli alias di tutte le entita esposte ad Assist.",
                     "file_field": "Campo multipart usato per caricare l'audio. La maggior parte dei server compatibili OpenAI usa `file`; whisper-asr-webservice richiede `audio_file`. Se non sei sicuro, lascia `file`: l'integrazione rileva e riprova automaticamente in caso di risposta 422.",
-                    "streaming_upload": "Carica l'audio sul provider mentre viene ancora registrato, invece che al termine della registrazione. Se il provider non accetta upload in streaming, l'integrazione torna automaticamente a un upload bufferizzato e ricorda di non riprovare."
+                    "streaming_upload": "Carica l'audio sul provider mentre viene ancora registrato, invece che al termine della registrazione. Se il provider non accetta upload in streaming, l'integrazione torna automaticamente a un upload bufferizzato e ricorda di non riprovare.",
+                    "skip_silence": "Controlla su questo Home Assistant se l'audio contiene parlato prima di caricarlo. Quando nessuno parla, per esempio dopo una parola di attivazione senza nient'altro, non viene caricato nulla e la pipeline termina senza testo riconosciuto. I modelli Whisper non restituiscono un testo vuoto per il silenzio: ne inventano uno, spesso una frase del prompt, che verrebbe poi eseguita come comando."
                 }
             }
         },
@@ -87,11 +93,13 @@
                     "model": "Modello",
                     "temperature": "Temperatura",
                     "prompt": "Prompt (Opzionale)",
-                    "streaming_upload": "Trasmetti l'audio durante la registrazione (minore latenza)"
+                    "streaming_upload": "Trasmetti l'audio durante la registrazione (minore latenza)",
+                    "skip_silence": "Salta l'audio senza parlato"
                 },
                 "data_description": {
                     "prompt": "Prompt puo' essere utilizzato per migliorare il riconoscimento di alcune parole o di nomi.\nFornisci una lista di parole o nomi separate da una virgola \", \".\nEsempio: `accendi, spegni, Chat GPT-3, DALL·E`.\nIl prompt puo' anche contenere template di Home Assistant che vengono valutati prima di ogni trascrizione, cosi' l'elenco resta automaticamente aggiornato, es. `'{{ states(''sensor.room_names'') }}, {{ states(''sensor.entity_names'') }}'`.\nUsa `'{{ assist_entity_names }}'` per elencare i nomi e gli alias di tutte le entita esposte ad Assist.",
-                    "streaming_upload": "Carica l'audio sul provider mentre viene ancora registrato, invece che al termine della registrazione. Se il provider non accetta upload in streaming, l'integrazione torna automaticamente a un upload bufferizzato e ricorda di non riprovare."
+                    "streaming_upload": "Carica l'audio sul provider mentre viene ancora registrato, invece che al termine della registrazione. Se il provider non accetta upload in streaming, l'integrazione torna automaticamente a un upload bufferizzato e ricorda di non riprovare.",
+                    "skip_silence": "Controlla su questo Home Assistant se l'audio contiene parlato prima di caricarlo. Quando nessuno parla, per esempio dopo una parola di attivazione senza nient'altro, non viene caricato nulla e la pipeline termina senza testo riconosciuto. I modelli Whisper non restituiscono un testo vuoto per il silenzio: ne inventano uno, spesso una frase del prompt, che verrebbe poi eseguita come comando."
                 }
             }
         },
